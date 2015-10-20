@@ -1,0 +1,15 @@
+{
+    "version": "1.0.0",
+    "summary": "A simple board built with Elm lang",
+    "repository": "https://github.com/mpetrone/elm-board.git",
+    "license": "BSD3",
+    "source-directories": [
+        "."
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "elm-lang/core": "2.0.0 <= v < 3.0.0",
+        "evancz/elm-html": "3.0.0 <= v < 4.0.0"
+    },
+    "elm-version": "0.15.0 <= v < 0.16.0"
+}
