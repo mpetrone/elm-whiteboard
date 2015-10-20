@@ -1,14 +1,12 @@
+module Board where
+
 import Json.Decode as Decode
 import Html exposing (..)
 import Html.Events exposing (on, onMouseDown, onMouseUp, onClick)
 import Html.Attributes exposing (id, style)
-import App
 import Color exposing (..)
 import Graphics.Collage exposing (..)
 import Debug
-
-main =
-  App.start { model = initModel, view = view, update = update }
 
 -- MODEL
 

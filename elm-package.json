@@ -1,8 +1,8 @@
 {
     "version": "1.0.0",
-    "summary": "A simple board built with Elm lang",
-    "repository": "https://github.com/mpetrone/elm-board.git",
-    "license": "BSD3",
+    "summary": "A simple witheboard built with Elm",
+    "repository": "https://github.com/mpetrone/elm-whiteboard.git",
+    "license": "MIT",
     "source-directories": [
         "."
     ],

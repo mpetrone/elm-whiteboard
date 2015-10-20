@@ -2,6 +2,7 @@ module App where
 
 import Html exposing (Html)
 import Signal exposing (Address)
+import Board exposing (initModel, view, update)
 import Window
 
 type alias Config model action =
@@ -9,6 +10,13 @@ type alias Config model action =
     , view : Address action -> (Int, Int) -> model -> Html
     , update : action -> model -> model
     }
+
+main =
+  start 
+    { model = initModel
+    , view = view
+    , update = update 
+    }    
 
 start : Config model action -> Signal Html
 start config =
