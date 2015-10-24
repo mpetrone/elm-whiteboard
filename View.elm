@@ -1,71 +1,14 @@
-module Board where
+module View where
 
 import Json.Decode as Decode
 import Html exposing (..)
 import Html.Events exposing (on, onMouseDown, onMouseUp, onClick)
 import Html.Attributes exposing (id, style, href)
+import Model exposing (..)
+import Debug exposing (watch)
+import Action exposing (..)
 import Color exposing (..)
 import Graphics.Collage exposing (..)
-import Debug
-
--- MODEL
-
-type alias Point = (Float, Float)
-type alias Line = { points: List Point, color: PencilColor, width: PencilWidth, mode: PencilMode }
-type alias Model = { currentMode: PencilMode, currentColor: PencilColor, currentWidth: PencilWidth, lines: List Line }
-type PencilColor = Red | Green | Blue | Black | White
-type PencilWidth = Thin | Normal | Thick
-type PencilMode = Circle | Free
-initModel: Model
-initModel = { currentMode = Free, currentColor = Red, currentWidth = Normal, lines = [] }
-
--- ACTION
-
-type Action = 
-  StartDraw Point | Draw Point | EndDraw | ChangeColor PencilColor | ChangeWidth PencilWidth | ChangeMode PencilMode
-update : Action -> Model -> Model
-update action model = 
-    case (Debug.watch "action" action) of
-      StartDraw (x,y) -> 
-        case List.head (List.map .points model.lines) of
-          Nothing -> addLine [(x,y), (x + 0.1,y)] model
-          Just [(x,y)] -> model
-          Just list -> addLine [(x,y), (x + 0.1,y)] model
-
-      EndDraw -> 
-        case List.head (List.map .points model.lines) of
-          Nothing -> model
-          Just [] -> model
-          Just list -> addLine [] model
-
-      Draw point -> 
-        case List.head model.lines of
-          Nothing -> model
-          Just line -> if (line.points == []) 
-                       then model 
-                       else {model | lines  <- (addPoint line point) :: (Maybe.withDefault [] (List.tail model.lines)) }
-
-      ChangeColor newColor -> {model | currentColor <- newColor}
-
-      ChangeWidth newWidth -> {model | currentWidth <- newWidth}
-
-      ChangeMode newMode -> {model | currentMode <- newMode}
-
-addLine: List Point -> Model -> Model
-addLine points' model =     
-  { model | lines  <- 
-    { color = model.currentColor
-    , width = model.currentWidth
-    , mode = model.currentMode
-    , points = points'
-    }
-    :: model.lines }
-
-addPoint: Line -> Point -> Line
-addPoint line point =
-  { line | points <- point :: line.points}
-
--- VIEW
 
 view : Signal.Address Action -> (Int, Int) -> Model -> Html
 view address (w, h) model =
@@ -89,7 +32,6 @@ buildToolBoox address =
     , buildButton address Black (ChangeWidth Normal) 10
     , buildButton address Black (ChangeWidth Thick) 15
     , buildButton address White (ChangeMode Circle) 20
-    , buildButton address Black (ChangeMode Free) 2
     ]
 
 buildButton: Signal.Address Action -> PencilColor -> Action -> Float -> Html
@@ -172,8 +114,3 @@ buildFooter =
     [ Html.text "Written by"
     , a [href "https://github.com/mpetrone"] [Html.text " Matias Petrone"]
     ]
-
-
-
- 
-      

@@ -2,7 +2,9 @@ module App where
 
 import Html exposing (Html)
 import Signal exposing (Address)
-import Board exposing (initModel, view, update)
+import Action exposing (update)
+import View exposing (view)
+import Model exposing (initModel)
 import Window
 
 type alias Config model action =
