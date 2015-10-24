@@ -11,17 +11,18 @@ import Debug
 -- MODEL
 
 type alias Point = (Float, Float)
-type alias Line = { points: List Point, color: PencilColor, width: PencilWidth }
-type alias Model = { currentColor: PencilColor, currentWidth: PencilWidth, lines: List Line }
-type PencilColor = Red | Green | Blue | Black
+type alias Line = { points: List Point, color: PencilColor, width: PencilWidth, mode: PencilMode }
+type alias Model = { currentMode: PencilMode, currentColor: PencilColor, currentWidth: PencilWidth, lines: List Line }
+type PencilColor = Red | Green | Blue | Black | White
 type PencilWidth = Thin | Normal | Thick
+type PencilMode = Circle | Free
 initModel: Model
-initModel = { currentColor = Red, currentWidth = Normal, lines = [] }
+initModel = { currentMode = Free, currentColor = Red, currentWidth = Normal, lines = [] }
 
 -- ACTION
 
 type Action = 
-  StartDraw Point | Draw Point | EndDraw | ChangeColor PencilColor | ChangeWidth PencilWidth
+  StartDraw Point | Draw Point | EndDraw | ChangeColor PencilColor | ChangeWidth PencilWidth | ChangeMode PencilMode
 update : Action -> Model -> Model
 update action model = 
     case (Debug.watch "action" action) of
@@ -48,9 +49,17 @@ update action model =
 
       ChangeWidth newWidth -> {model | currentWidth <- newWidth}
 
+      ChangeMode newMode -> {model | currentMode <- newMode}
+
 addLine: List Point -> Model -> Model
 addLine points' model =     
-  { model | lines  <- {color = model.currentColor, width = model.currentWidth, points = points'} :: model.lines }
+  { model | lines  <- 
+    { color = model.currentColor
+    , width = model.currentWidth
+    , mode = model.currentMode
+    , points = points'
+    }
+    :: model.lines }
 
 addPoint: Line -> Point -> Line
 addPoint line point =
@@ -79,6 +88,8 @@ buildToolBoox address =
     , buildButton address Black (ChangeWidth Thin) 5
     , buildButton address Black (ChangeWidth Normal) 10
     , buildButton address Black (ChangeWidth Thick) 15
+    , buildButton address White (ChangeMode Circle) 20
+    , buildButton address Black (ChangeMode Free) 2
     ]
 
 buildButton: Signal.Address Action -> PencilColor -> Action -> Float -> Html
@@ -91,12 +102,17 @@ buildButton address color action size=
 
 buildBoard: Signal.Address Action -> (Int, Int) -> Model -> Html
 buildBoard address (w, h) model =
-  let parseLine line = traced (buildLineStyle line) (path line.points)
+  let parseLine line = if line.mode == Circle then parseCircle line else parseFreeLine line
+      parseFreeLine line = traced (buildLineStyle line) (path line.points)
+      parseCircle line = calculateRadius (w,h) line.points
+                          |> circle 
+                          |> outlined (buildLineStyle line)
+                          |> move ( Maybe.withDefault (0,0) ( List.head (List.reverse (line.points))))
       decodeLocation = Decode.object2 (,) (Decode.at ["pageX"] Decode.float) (Decode.at ["pageY"] Decode.float)
   in div 
       [ id "my-div"
-      , on "mousemove" decodeLocation (\(x,y)-> Signal.message address (Draw (x - toFloat w / 2, toFloat h / 2 - y)))
-      , on "mousedown" decodeLocation (\(x,y)-> Signal.message address (StartDraw (x - toFloat w / 2, toFloat h / 2 - y)))
+      , on "mousemove" decodeLocation (\(x,y)-> Signal.message address (Draw (toAbsolutPosition (x,y) (w,h))))
+      , on "mousedown" decodeLocation (\(x,y)-> Signal.message address (StartDraw (toAbsolutPosition (x,y) (w,h))))
       , onMouseUp address EndDraw
       ]
       [  
@@ -107,6 +123,10 @@ buildBoard address (w, h) model =
             |> collage w h 
             |> fromElement
       ]
+
+toAbsolutPosition: (Float, Float) -> (Int, Int) -> (Float, Float)
+toAbsolutPosition (x,y) (w, h) =
+    (x - toFloat w / 2, toFloat h / 2 - y)
 
 buildLineStyle: Line -> LineStyle
 buildLineStyle line = 
@@ -132,6 +152,18 @@ toColor p =
     Green -> rgb 0 200 0
     Blue -> rgb 0 0 200
     Black -> rgb 0 0 0
+    White -> rgb 255 255 255
+
+calculateRadius: (Int, Int) -> List Point -> Float
+calculateRadius dimensions points =
+  let first = List.head points
+      last = List.head (List.reverse points)
+  in case (first, last) of 
+    (Just f, Just l) -> 
+      let (x1,y1) = toAbsolutPosition f dimensions
+          (x2,y2) = toAbsolutPosition l dimensions
+      in sqrt ((x1-x2)^2 + (y1-y2)^2)
+    _ -> 0
 
 buildFooter: Html
 buildFooter =
