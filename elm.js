@@ -1,4 +1,67 @@
 var Elm = Elm || { Native: {} };
+Elm.App = Elm.App || {};
+Elm.App.make = function (_elm) {
+   "use strict";
+   _elm.App = _elm.App || {};
+   if (_elm.App.values)
+   return _elm.App.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   $moduleName = "App",
+   $Basics = Elm.Basics.make(_elm),
+   $Board = Elm.Board.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $Window = Elm.Window.make(_elm);
+   var start = function (config) {
+      return function () {
+         var actions = $Signal.mailbox($Maybe.Nothing);
+         var address = A2($Signal.forwardTo,
+         actions.address,
+         $Maybe.Just);
+         var model = A3($Signal.foldp,
+         F2(function (_v0,model) {
+            return function () {
+               switch (_v0.ctor)
+               {case "Just":
+                  return A2(config.update,
+                    _v0._0,
+                    model);}
+               _U.badCase($moduleName,
+               "on line 32, column 34 to 60");
+            }();
+         }),
+         config.model,
+         actions.signal);
+         return A3($Signal.map2,
+         config.view(address),
+         $Window.dimensions,
+         model);
+      }();
+   };
+   var main = start({_: {}
+                    ,model: $Board.initModel
+                    ,update: $Board.update
+                    ,view: $Board.view});
+   var Config = F3(function (a,
+   b,
+   c) {
+      return {_: {}
+             ,model: a
+             ,update: c
+             ,view: b};
+   });
+   _elm.App.values = {_op: _op
+                     ,Config: Config
+                     ,main: main
+                     ,start: start};
+   return _elm.App.values;
+};
 Elm.Array = Elm.Array || {};
 Elm.Array.make = function (_elm) {
    "use strict";
@@ -12705,6 +12768,75 @@ Elm.Native.VirtualDom.make = function(elm)
 
 },{}]},{},[39]);
 
+Elm.Native = Elm.Native || {};
+Elm.Native.Window = {};
+Elm.Native.Window.make = function(localRuntime) {
+
+  localRuntime.Native = localRuntime.Native || {};
+  localRuntime.Native.Window = localRuntime.Native.Window || {};
+  if (localRuntime.Native.Window.values)
+  {
+    return localRuntime.Native.Window.values;
+  }
+
+  var NS = Elm.Native.Signal.make(localRuntime);
+  var Tuple2 = Elm.Native.Utils.make(localRuntime).Tuple2;
+
+
+  function getWidth()
+  {
+    return localRuntime.node.clientWidth;
+  }
+
+
+  function getHeight()
+  {
+    if (localRuntime.isFullscreen())
+    {
+      return window.innerHeight;
+    }
+    return localRuntime.node.clientHeight;
+  }
+
+
+  var dimensions = NS.input('Window.dimensions', Tuple2(getWidth(), getHeight()));
+
+
+  function resizeIfNeeded()
+  {
+    // Do not trigger event if the dimensions have not changed.
+    // This should be most of the time.
+    var w = getWidth();
+    var h = getHeight();
+    if (dimensions.value._0 === w && dimensions.value._1 === h)
+    {
+      return;
+    }
+
+    setTimeout(function () {
+      // Check again to see if the dimensions have changed.
+      // It is conceivable that the dimensions have changed
+      // again while some other event was being processed.
+      var w = getWidth();
+      var h = getHeight();
+      if (dimensions.value._0 === w && dimensions.value._1 === h)
+      {
+        return;
+      }
+      localRuntime.notify(dimensions.id, Tuple2(w,h));
+    }, 0);
+  }
+
+
+  localRuntime.addListener([dimensions.id], window, 'resize', resizeIfNeeded);
+
+
+  return localRuntime.Native.Window.values = {
+    dimensions: dimensions,
+    resizeIfNeeded: resizeIfNeeded
+  };
+};
+
 Elm.Result = Elm.Result || {};
 Elm.Result.make = function (_elm) {
    "use strict";
@@ -13601,22 +13733,6 @@ Elm.VirtualDom.make = function (_elm) {
    var text = $Native$VirtualDom.text;
    var node = $Native$VirtualDom.node;
    var Node = {ctor: "Node"};
-   _elm.VirtualDom.values = {_op: _op
-                            ,Node: Node
-                            ,node: node
-                            ,text: text
-                            ,toElement: toElement
-                            ,fromElement: fromElement
-                            ,Property: Property
-                            ,property: property
-                            ,attribute: attribute
-                            ,on: on
-                            ,lazy: lazy
-                            ,lazy2: lazy2
-                            ,lazy3: lazy3};
-   return _elm.VirtualDom.values;
-};
-ode"};
    _elm.VirtualDom.values = {_op: _op
                             ,Node: Node
                             ,node: node
