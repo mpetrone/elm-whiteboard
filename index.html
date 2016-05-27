@@ -8792,9 +8792,20 @@ var _elm_lang$window$Window$subMap = F2(
 			});
 	});
 _elm_lang$core$Native_Platform.effectManagers['Window'] = {pkg: 'elm-lang/window', init: _elm_lang$window$Window$init, onEffects: _elm_lang$window$Window$onEffects, onSelfMsg: _elm_lang$window$Window$onSelfMsg, tag: 'sub', subMap: _elm_lang$window$Window$subMap};
-var _mpetrone$elm_whiteboard$Main$toColorString = function (p) {
+var _mpetrone$elm_whiteboard$Main$toWidthString = function (p) {
 	var _p0 = p;
 	switch (_p0.ctor) {
+		case 'Thin':
+			return 'thin';
+		case 'Normal':
+			return 'normal';
+		default:
+			return 'thick';
+	}
+};
+var _mpetrone$elm_whiteboard$Main$toColorString = function (p) {
+	var _p1 = p;
+	switch (_p1.ctor) {
 		case 'Red':
 			return 'red';
 		case 'Green':
@@ -8807,6 +8818,35 @@ var _mpetrone$elm_whiteboard$Main$toColorString = function (p) {
 			return 'white';
 	}
 };
+var _mpetrone$elm_whiteboard$Main$encodePencilWidth = function (width) {
+	return _elm_lang$core$Json_Encode$string(
+		_mpetrone$elm_whiteboard$Main$toWidthString(width));
+};
+var _mpetrone$elm_whiteboard$Main$encodePencilColor = function (color) {
+	return _elm_lang$core$Json_Encode$string(
+		_mpetrone$elm_whiteboard$Main$toColorString(color));
+};
+var _mpetrone$elm_whiteboard$Main$encodePosition = function (record) {
+	return _elm_lang$core$Json_Encode$object(
+		_elm_lang$core$Native_List.fromArray(
+			[
+				{
+				ctor: '_Tuple2',
+				_0: 'x',
+				_1: _elm_lang$core$Json_Encode$int(record.x)
+			},
+				{
+				ctor: '_Tuple2',
+				_0: 'y',
+				_1: _elm_lang$core$Json_Encode$int(record.y)
+			}
+			]));
+};
+var _mpetrone$elm_whiteboard$Main$decodePosition = A3(
+	_elm_lang$core$Json_Decode$object2,
+	_elm_lang$mouse$Mouse$Position,
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'x', _elm_lang$core$Json_Decode$int),
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'y', _elm_lang$core$Json_Decode$int));
 var _mpetrone$elm_whiteboard$Main$buildButton = F2(
 	function (msg, buttonText) {
 		return A2(
@@ -8874,63 +8914,22 @@ var _mpetrone$elm_whiteboard$Main$buildWhiteboard = F3(
 				]),
 			A2(_elm_lang$core$List$map, _mpetrone$elm_whiteboard$Main$drawLine, model.lines));
 	});
-var _mpetrone$elm_whiteboard$Main$encodePencilColor = function (color) {
-	return _elm_lang$core$Json_Encode$string(
-		_mpetrone$elm_whiteboard$Main$toColorString(color));
-};
-var _mpetrone$elm_whiteboard$Main$encodePosition = function (record) {
-	return _elm_lang$core$Json_Encode$object(
-		_elm_lang$core$Native_List.fromArray(
-			[
-				{
-				ctor: '_Tuple2',
-				_0: 'x',
-				_1: _elm_lang$core$Json_Encode$int(record.x)
-			},
-				{
-				ctor: '_Tuple2',
-				_0: 'y',
-				_1: _elm_lang$core$Json_Encode$int(record.y)
-			}
-			]));
-};
-var _mpetrone$elm_whiteboard$Main$encodeLine = function (record) {
-	return _elm_lang$core$Json_Encode$object(
-		_elm_lang$core$Native_List.fromArray(
-			[
-				{
-				ctor: '_Tuple2',
-				_0: 'points',
-				_1: _elm_lang$core$Json_Encode$list(
-					A2(_elm_lang$core$List$map, _mpetrone$elm_whiteboard$Main$encodePosition, record.points))
-			},
-				{
-				ctor: '_Tuple2',
-				_0: 'color',
-				_1: _mpetrone$elm_whiteboard$Main$encodePencilColor(record.color)
-			}
-			]));
-};
-var _mpetrone$elm_whiteboard$Main$decodePosition = A3(
-	_elm_lang$core$Json_Decode$object2,
-	_elm_lang$mouse$Mouse$Position,
-	A2(_elm_lang$core$Json_Decode_ops[':='], 'x', _elm_lang$core$Json_Decode$int),
-	A2(_elm_lang$core$Json_Decode_ops[':='], 'y', _elm_lang$core$Json_Decode$int));
-var _mpetrone$elm_whiteboard$Main$Line = F2(
-	function (a, b) {
-		return {points: a, color: b};
+var _mpetrone$elm_whiteboard$Main$Line = F3(
+	function (a, b, c) {
+		return {points: a, color: b, width: c};
 	});
-var _mpetrone$elm_whiteboard$Main$addNewDraw = F3(
-	function (lines, position, color) {
-		var _p1 = lines;
-		if (_p1.ctor === '::') {
+var _mpetrone$elm_whiteboard$Main$addNewDraw = F4(
+	function (lines, position, color, width) {
+		var _p2 = lines;
+		if (_p2.ctor === '::') {
 			return A2(
 				_elm_lang$core$List_ops['::'],
-				A2(
+				A3(
 					_mpetrone$elm_whiteboard$Main$Line,
-					A2(_elm_lang$core$List_ops['::'], position, _p1._0.points),
-					color),
-				_p1._1);
+					A2(_elm_lang$core$List_ops['::'], position, _p2._0.points),
+					color,
+					width),
+				_p2._1);
 		} else {
 			return _elm_lang$core$Native_List.fromArray(
 				[]);
@@ -8938,18 +8937,18 @@ var _mpetrone$elm_whiteboard$Main$addNewDraw = F3(
 	});
 var _mpetrone$elm_whiteboard$Main$update = F2(
 	function (msg, model) {
-		var _p2 = msg;
-		switch (_p2.ctor) {
-			case 'Movement':
-				return model.drawing ? {
+		var _p3 = msg;
+		switch (_p3.ctor) {
+			case 'Draw':
+				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							lines: A3(_mpetrone$elm_whiteboard$Main$addNewDraw, model.lines, _p2._0, model.currentColor)
+							lines: A4(_mpetrone$elm_whiteboard$Main$addNewDraw, model.lines, _p3._0, model.currentColor, model.currentWidth)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
-				} : {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+				};
 			case 'ClickHold':
 				return {
 					ctor: '_Tuple2',
@@ -8958,11 +8957,12 @@ var _mpetrone$elm_whiteboard$Main$update = F2(
 						{
 							lines: A2(
 								_elm_lang$core$List_ops['::'],
-								A2(
+								A3(
 									_mpetrone$elm_whiteboard$Main$Line,
 									_elm_lang$core$Native_List.fromArray(
 										[]),
-									model.currentColor),
+									model.currentColor,
+									model.currentWidth),
 								model.lines),
 							drawing: true
 						}),
@@ -8981,7 +8981,7 @@ var _mpetrone$elm_whiteboard$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{windowSize: _p2._0}),
+						{windowSize: _p3._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeColor':
@@ -8989,7 +8989,15 @@ var _mpetrone$elm_whiteboard$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{currentColor: _p2._0}),
+						{currentColor: _p3._0}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'ChangeWidth':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{currentWidth: _p3._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ResetWhiteboad':
@@ -9008,29 +9016,16 @@ var _mpetrone$elm_whiteboard$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{input: _p2._0}),
+						{input: _p3._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'Send':
-				return {
-					ctor: '_Tuple2',
-					_0: model,
-					_1: A2(
-						_elm_lang$websocket$WebSocket$send,
-						model.input,
-						A2(
-							_elm_lang$core$Json_Encode$encode,
-							0,
-							_elm_lang$core$Json_Encode$list(
-								A2(_elm_lang$core$List$map, _mpetrone$elm_whiteboard$Main$encodeLine, model.lines))))
-				};
-			case 'Listen':
+			case 'Connect':
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							listenHost: _elm_lang$core$Maybe$Just(model.input)
+							host: _elm_lang$core$Maybe$Just(model.input)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -9039,36 +9034,23 @@ var _mpetrone$elm_whiteboard$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{lines: _p2._0}),
+						{lines: _p3._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 		}
 	});
-var _mpetrone$elm_whiteboard$Main$Model = F6(
-	function (a, b, c, d, e, f) {
-		return {lines: a, drawing: b, currentColor: c, windowSize: d, input: e, listenHost: f};
+var _mpetrone$elm_whiteboard$Main$Model = F7(
+	function (a, b, c, d, e, f, g) {
+		return {lines: a, drawing: b, currentColor: c, currentWidth: d, windowSize: e, input: f, host: g};
 	});
 var _mpetrone$elm_whiteboard$Main$White = {ctor: 'White'};
 var _mpetrone$elm_whiteboard$Main$Black = {ctor: 'Black'};
-var _mpetrone$elm_whiteboard$Main$init = {
-	ctor: '_Tuple2',
-	_0: A6(
-		_mpetrone$elm_whiteboard$Main$Model,
-		_elm_lang$core$Native_List.fromArray(
-			[]),
-		false,
-		_mpetrone$elm_whiteboard$Main$Black,
-		A2(_elm_lang$window$Window$Size, 1279, 704),
-		'',
-		_elm_lang$core$Maybe$Nothing),
-	_1: _elm_lang$core$Platform_Cmd$none
-};
 var _mpetrone$elm_whiteboard$Main$Blue = {ctor: 'Blue'};
 var _mpetrone$elm_whiteboard$Main$Green = {ctor: 'Green'};
 var _mpetrone$elm_whiteboard$Main$Red = {ctor: 'Red'};
 var _mpetrone$elm_whiteboard$Main$toPencilColor = function (color) {
-	var _p3 = color;
-	switch (_p3) {
+	var _p4 = color;
+	switch (_p4) {
 		case 'red':
 			return _mpetrone$elm_whiteboard$Main$Red;
 		case 'blue':
@@ -9087,37 +9069,51 @@ var _mpetrone$elm_whiteboard$Main$decodePencilColor = function (color) {
 	return _elm_lang$core$Json_Decode$succeed(
 		_mpetrone$elm_whiteboard$Main$toPencilColor(color));
 };
-var _mpetrone$elm_whiteboard$Main$decodeLine = A3(
-	_elm_lang$core$Json_Decode$object2,
-	_mpetrone$elm_whiteboard$Main$Line,
-	A2(
-		_elm_lang$core$Json_Decode_ops[':='],
-		'points',
-		_elm_lang$core$Json_Decode$list(_mpetrone$elm_whiteboard$Main$decodePosition)),
-	A2(
-		_elm_lang$core$Json_Decode$andThen,
-		A2(_elm_lang$core$Json_Decode_ops[':='], 'color', _elm_lang$core$Json_Decode$string),
-		_mpetrone$elm_whiteboard$Main$decodePencilColor));
+var _mpetrone$elm_whiteboard$Main$Thick = {ctor: 'Thick'};
+var _mpetrone$elm_whiteboard$Main$Normal = {ctor: 'Normal'};
+var _mpetrone$elm_whiteboard$Main$init = {
+	ctor: '_Tuple2',
+	_0: A7(
+		_mpetrone$elm_whiteboard$Main$Model,
+		_elm_lang$core$Native_List.fromArray(
+			[]),
+		false,
+		_mpetrone$elm_whiteboard$Main$Black,
+		_mpetrone$elm_whiteboard$Main$Normal,
+		A2(_elm_lang$window$Window$Size, 1279, 704),
+		'',
+		_elm_lang$core$Maybe$Nothing),
+	_1: _elm_lang$core$Platform_Cmd$none
+};
+var _mpetrone$elm_whiteboard$Main$Thin = {ctor: 'Thin'};
+var _mpetrone$elm_whiteboard$Main$toPencilWidth = function (width) {
+	var _p5 = width;
+	switch (_p5) {
+		case 'thin':
+			return _mpetrone$elm_whiteboard$Main$Thin;
+		case 'normal':
+			return _mpetrone$elm_whiteboard$Main$Normal;
+		case 'thick':
+			return _mpetrone$elm_whiteboard$Main$Thick;
+		default:
+			return _mpetrone$elm_whiteboard$Main$Normal;
+	}
+};
+var _mpetrone$elm_whiteboard$Main$decodePencilWidth = function (width) {
+	return _elm_lang$core$Json_Decode$succeed(
+		_mpetrone$elm_whiteboard$Main$toPencilWidth(width));
+};
 var _mpetrone$elm_whiteboard$Main$NewMessage = function (a) {
 	return {ctor: 'NewMessage', _0: a};
 };
-var _mpetrone$elm_whiteboard$Main$decodeLineList = function (json) {
-	var decoder = _elm_lang$core$Json_Decode$list(_mpetrone$elm_whiteboard$Main$decodeLine);
-	var _p4 = A2(_elm_lang$core$Json_Decode$decodeString, decoder, json);
-	if (_p4.ctor === 'Ok') {
-		return _mpetrone$elm_whiteboard$Main$NewMessage(_p4._0);
-	} else {
-		return _mpetrone$elm_whiteboard$Main$NewMessage(
-			_elm_lang$core$Native_List.fromArray(
-				[]));
-	}
-};
-var _mpetrone$elm_whiteboard$Main$Listen = {ctor: 'Listen'};
-var _mpetrone$elm_whiteboard$Main$Send = {ctor: 'Send'};
+var _mpetrone$elm_whiteboard$Main$Connect = {ctor: 'Connect'};
 var _mpetrone$elm_whiteboard$Main$Input = function (a) {
 	return {ctor: 'Input', _0: a};
 };
 var _mpetrone$elm_whiteboard$Main$ResetWhiteboad = {ctor: 'ResetWhiteboad'};
+var _mpetrone$elm_whiteboard$Main$ChangeWidth = function (a) {
+	return {ctor: 'ChangeWidth', _0: a};
+};
 var _mpetrone$elm_whiteboard$Main$ChangeColor = function (a) {
 	return {ctor: 'ChangeColor', _0: a};
 };
@@ -9161,6 +9157,18 @@ var _mpetrone$elm_whiteboard$Main$buildToolBox = function (height) {
 				_mpetrone$elm_whiteboard$Main$buildButton,
 				_mpetrone$elm_whiteboard$Main$ChangeColor(_mpetrone$elm_whiteboard$Main$Black),
 				'negro'),
+				A2(
+				_mpetrone$elm_whiteboard$Main$buildButton,
+				_mpetrone$elm_whiteboard$Main$ChangeWidth(_mpetrone$elm_whiteboard$Main$Thin),
+				'fino'),
+				A2(
+				_mpetrone$elm_whiteboard$Main$buildButton,
+				_mpetrone$elm_whiteboard$Main$ChangeWidth(_mpetrone$elm_whiteboard$Main$Normal),
+				'normal'),
+				A2(
+				_mpetrone$elm_whiteboard$Main$buildButton,
+				_mpetrone$elm_whiteboard$Main$ChangeWidth(_mpetrone$elm_whiteboard$Main$Thick),
+				'grueso'),
 				A2(_mpetrone$elm_whiteboard$Main$buildButton, _mpetrone$elm_whiteboard$Main$ResetWhiteboad, 'borrar todo'),
 				A2(
 				_elm_lang$html$Html$input,
@@ -9170,8 +9178,7 @@ var _mpetrone$elm_whiteboard$Main$buildToolBox = function (height) {
 					]),
 				_elm_lang$core$Native_List.fromArray(
 					[])),
-				A2(_mpetrone$elm_whiteboard$Main$buildButton, _mpetrone$elm_whiteboard$Main$Send, 'Send'),
-				A2(_mpetrone$elm_whiteboard$Main$buildButton, _mpetrone$elm_whiteboard$Main$Listen, 'Listen')
+				A2(_mpetrone$elm_whiteboard$Main$buildButton, _mpetrone$elm_whiteboard$Main$Connect, 'Connect')
 			]));
 };
 var _mpetrone$elm_whiteboard$Main$view = function (model) {
@@ -9197,17 +9204,31 @@ var _mpetrone$elm_whiteboard$Main$ClickRelease = function (a) {
 var _mpetrone$elm_whiteboard$Main$ClickHold = function (a) {
 	return {ctor: 'ClickHold', _0: a};
 };
-var _mpetrone$elm_whiteboard$Main$Movement = function (a) {
-	return {ctor: 'Movement', _0: a};
+var _mpetrone$elm_whiteboard$Main$Draw = function (a) {
+	return {ctor: 'Draw', _0: a};
+};
+var _mpetrone$elm_whiteboard$Main$decodePositionToMsg = function (json) {
+	var _p6 = A2(_elm_lang$core$Json_Decode$decodeString, _mpetrone$elm_whiteboard$Main$decodePosition, json);
+	if (_p6.ctor === 'Ok') {
+		return _mpetrone$elm_whiteboard$Main$Draw(_p6._0);
+	} else {
+		return _elm_lang$core$Native_Utils.crashCase(
+			'Main',
+			{
+				start: {line: 134, column: 3},
+				end: {line: 136, column: 35}
+			},
+			_p6)(_p6._0);
+	}
 };
 var _mpetrone$elm_whiteboard$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$batch(
 		_elm_lang$core$Native_List.fromArray(
 			[
-				_elm_lang$mouse$Mouse$moves(
+				model.drawing ? _elm_lang$mouse$Mouse$moves(
 				function (position) {
-					return _mpetrone$elm_whiteboard$Main$Movement(position);
-				}),
+					return _mpetrone$elm_whiteboard$Main$Draw(position);
+				}) : _elm_lang$core$Platform_Sub$none,
 				_elm_lang$mouse$Mouse$downs(
 				function (position) {
 					return _mpetrone$elm_whiteboard$Main$ClickHold(position);
@@ -9221,9 +9242,12 @@ var _mpetrone$elm_whiteboard$Main$subscriptions = function (model) {
 					return _mpetrone$elm_whiteboard$Main$Resize(size);
 				}),
 				function () {
-				var _p5 = model.listenHost;
-				if (_p5.ctor === 'Just') {
-					return A2(_elm_lang$websocket$WebSocket$listen, _p5._0, _mpetrone$elm_whiteboard$Main$decodeLineList);
+				var _p8 = model.host;
+				if (_p8.ctor === 'Just') {
+					return A2(
+						_elm_lang$core$Debug$log,
+						'receive',
+						A2(_elm_lang$websocket$WebSocket$listen, _p8._0, _mpetrone$elm_whiteboard$Main$decodePositionToMsg));
 				} else {
 					return _elm_lang$core$Platform_Sub$none;
 				}

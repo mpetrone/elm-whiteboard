@@ -10,6 +10,7 @@ import WebSocket
 import Json.Encode as Encode
 import Json.Decode as Decode
 import Json.Decode exposing ((:=))
+import Debug
 
 main =
   App.program
@@ -18,7 +19,6 @@ main =
     , update = update
     , subscriptions = subscriptions
     }
-
 
 -- MODEL
 
@@ -29,52 +29,62 @@ type PencilColor =
   | Black 
   | White 
 
+type PencilWidth = 
+    Thin 
+  | Normal 
+  | Thick 
+
 type alias Line = 
   { points: List Position
-  , color: PencilColor }
+  , color: PencilColor 
+  , width: PencilWidth }
 
 type alias Model =     
   { lines : List Line
   , drawing : Bool
   , currentColor : PencilColor
+  , currentWidth : PencilWidth
   , windowSize : Size
   , input: String
-  , listenHost: Maybe String
+  , host: Maybe String
   }
 
 
 init : ( Model, Cmd Msg )
 init =
-  (Model [] False Black (Size 1279 704) "" Nothing, Cmd.none)
-
+  (Model [] False Black Normal (Size 1279 704) "" Nothing, Cmd.none)
 
 -- UPDATE
 
 type Msg = 
-    Movement Position 
+    Draw Position
+  | WebSocketDraw Position
   | ClickHold Position 
   | ClickRelease Position 
   | Resize Size 
   | ChangeColor PencilColor 
+  | ChangeWidth PencilWidth
   | ResetWhiteboad
   | Input String
-  | Send
-  | Listen
+  | Connect
   | NewMessage (List Line)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    Movement position ->
-      if model.drawing then
-        ({ model | lines = addNewDraw model.lines position model.currentColor}, Cmd.none)
-      else 
-        (model, Cmd.none)
+    Draw position ->
+      ({ model | lines = addNewDraw model.lines position model.currentColor model.currentWidth}, 
+        case model.host of
+          Just host -> WebSocket.send host (Debug.log "sent" (Encode.encode 0 (encodePosition position)))
+          Nothing -> Cmd.none)
+
+    WebSocketDraw position ->
+      ({ model | lines = addNewDraw model.lines position model.currentColor model.currentWidth}, Cmd.none)  
 
     ClickHold position ->
       ({ model | 
-        lines = (Line [] model.currentColor) :: model.lines,
+        lines = (Line [] model.currentColor model.currentWidth) :: model.lines,
         drawing = True
       } , Cmd.none) 
 
@@ -87,92 +97,49 @@ update msg model =
     ChangeColor color ->
       ({ model | currentColor = color }, Cmd.none) 
 
+    ChangeWidth width ->
+      ({ model | currentWidth = width }, Cmd.none) 
+
     ResetWhiteboad ->
       ({ model | lines = [] }, Cmd.none)   
 
     Input newInput ->
       ({ model | input = newInput }, Cmd.none)   
 
-    Send ->
-      ( model , 
-        WebSocket.send model.input 
-        (Encode.encode 0 
-          (Encode.list 
-            (List.map encodeLine model.lines)
-          )
-        )
-      )
-
-    Listen ->
-      ({ model | listenHost = Just model.input }, Cmd.none) 
+    Connect ->
+      ({ model | host = Just model.input }, Cmd.none) 
 
     NewMessage lines ->
-      ({ model | lines = lines }, Cmd.none)   
+      ({ model | lines = lines }, Cmd.none)    
 
-addNewDraw: List Line -> Position -> PencilColor -> List Line
-addNewDraw lines position color =
+addNewDraw: List Line -> Position -> PencilColor -> PencilWidth -> List Line
+addNewDraw lines position color width =
     case lines of
         head :: tail ->
-            (Line (position :: head.points) color) :: tail
+            (Line (position :: head.points) color width) :: tail
         [] -> 
             []
-
 
 -- SUBSCRIPTIONS
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch [
-        Mouse.moves (\position -> Movement position),
-        Mouse.downs (\position -> ClickHold position),
-        Mouse.ups (\position -> ClickRelease position),
-        Window.resizes (\size -> Resize size),
-        case model.listenHost of
-          Just host -> WebSocket.listen host decodeLineList
+        (if model.drawing then Mouse.moves (\position -> Draw position)
+                          else Sub.none)
+        ,Mouse.downs (\position -> ClickHold position)
+        ,Mouse.ups (\position -> ClickRelease position)
+        ,Window.resizes (\size -> Resize size),
+        case model.host of
+          Just host -> WebSocket.listen host decodePositionToMsg
           Nothing -> Sub.none
     ]
  
-decodeLineList: String -> Msg 
-decodeLineList json = 
-    let decoder = Decode.list decodeLine
-    in 
-      case Decode.decodeString decoder json of
-        Ok lines -> NewMessage lines
-        Err error -> NewMessage []
-
--- JSON
-
-decodeLine : Decode.Decoder Line
-decodeLine =
-    Decode.object2 Line
-      ("points" := Decode.list decodePosition)
-      (("color" := Decode.string) `Decode.andThen` decodePencilColor)
-
-decodePosition : Decode.Decoder Position
-decodePosition =
-    Decode.object2 Position
-      ("x" := Decode.int)
-      ("y" := Decode.int)
-
-decodePencilColor : String -> Decode.Decoder PencilColor
-decodePencilColor color = Decode.succeed (toPencilColor color)
-
-encodeLine : Line -> Encode.Value
-encodeLine record =
-    Encode.object
-        [ ("points",  Encode.list (List.map encodePosition  record.points))
-        , ("color",  encodePencilColor record.color)
-        ]
-
-encodePosition : Position -> Encode.Value
-encodePosition record =
-    Encode.object
-        [ ("x",   Encode.int record.x)
-        , ("y",  Encode.int  record.y)
-        ]        
-
-encodePencilColor : PencilColor -> Encode.Value
-encodePencilColor color = Encode.string (toColorString color)
+decodePositionToMsg: String -> Msg 
+decodePositionToMsg json = 
+  case Decode.decodeString decodePosition json of
+    Ok position -> Debug.log "received" (WebSocketDraw position)
+    Err error -> Debug.crash error
 
 -- VIEW
 
@@ -209,8 +176,7 @@ drawLine line =
 buildToolBox: Int -> Html Msg
 buildToolBox height =
   Html.div 
-    [  
-      style
+    [ style
         [ ("backgroundColor", "grey")
         , ("height", (toString height) ++ "px")
         , ("width", "100%")
@@ -222,10 +188,12 @@ buildToolBox height =
     , buildButton (ChangeColor Green) "verde"
     , buildButton (ChangeColor Blue) "azul"
     , buildButton (ChangeColor Black) "negro"
+    , buildButton (ChangeWidth Thin) "fino"
+    , buildButton (ChangeWidth Normal) "normal"
+    , buildButton (ChangeWidth Thick) "grueso"
     , buildButton ResetWhiteboad "borrar todo"
     , Html.input [onInput Input] []
-    , buildButton Send "Send"
-    , buildButton Listen "Listen"
+    , buildButton Connect "Connect"
     ]
 
 buildButton: Msg -> String -> Html Msg
@@ -234,8 +202,33 @@ buildButton msg buttonText =
   [ onClick msg ] 
   [ Html.text buttonText ]
 
+-- JSON
 
--- AUX
+
+decodePosition : Decode.Decoder Position
+decodePosition =
+    Decode.object2 Position
+      ("x" := Decode.int)
+      ("y" := Decode.int)
+
+decodePencilColor : String -> Decode.Decoder PencilColor
+decodePencilColor color = Decode.succeed (toPencilColor color)
+
+decodePencilWidth : String -> Decode.Decoder PencilWidth
+decodePencilWidth width = Decode.succeed (toPencilWidth width)
+
+encodePosition : Position -> Encode.Value
+encodePosition record =
+    Encode.object
+        [ ("x", Encode.int record.x)
+        , ("y", Encode.int record.y)
+        ]        
+
+encodePencilColor : PencilColor -> Encode.Value
+encodePencilColor color = Encode.string (toColorString color)
+
+encodePencilWidth : PencilWidth -> Encode.Value
+encodePencilWidth width = Encode.string (toWidthString width)
 
 toPencilColor : String -> PencilColor
 toPencilColor color =
@@ -255,3 +248,19 @@ toColorString p =
     Blue -> "blue"
     Black -> "black"
     White -> "white" 
+
+toPencilWidth : String -> PencilWidth
+toPencilWidth width =
+  case width of
+    "thin" -> Thin
+    "normal" -> Normal
+    "thick" -> Thick
+    _ -> Normal
+    
+toWidthString: PencilWidth -> String
+toWidthString p =
+  case p of
+    Thin -> "thin"
+    Normal -> "normal"
+    Thick -> "thick"
+
